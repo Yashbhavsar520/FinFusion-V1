@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String        @id @default(uuid())
+  name        String?
+  email       String?       @unique
+  password    String
+  income      Float         @default(0)
+  budgets     Budget[]
+  createdAt   DateTime      @default(now())
+  Expense     Expense[]
+  GroupMember GroupMember[]
+  ExpenseSplit ExpenseSplit[]
+}
+
+model Group {
+  id          String        @id @default(uuid())
+  name        String
+  expenses    Expense[]
+  settlements Settlement[]
+  createdAt   DateTime      @default(now())
+  GroupMember GroupMember[]
+}
+
+model Expense {
+  id       String @id @default(uuid())
+  title    String
+  amount   Float
+  category String
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+
+  groupId   String?
+  group     Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+  splits    ExpenseSplit[] 
+}
+
+model ExpenseSplit {
+  id        String  @id @default(uuid())
+  expenseId String
+  userId    String
+  share     Float
+
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([expenseId, userId]) // one split per person per expense
+}
+
+model Settlement {
+  id        String   @id @default(uuid())
+  fromUser  String
+  toUser    String
+  amount    Float
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Budget {
+  id        String   @id @default(cuid())
+  userId    String
+  category  String
+  month     Int
+  year      Int
+  limit     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, month, year, category])
+}
+
+model GroupMember {
+  id      String @id @default(uuid())
+  userId  String
+  groupId String
+
+  user  User  @relation(fields: [userId], references: [id])
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+}
